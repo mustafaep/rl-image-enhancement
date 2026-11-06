@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+# Veri seti repoya konmaz (büyük), data/README.md'deki adımlarla indirilir
+data/LOL/
+# Büyük ara çıktılar
+results/*.npy
