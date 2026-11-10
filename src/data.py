@@ -1,8 +1,10 @@
 """
 LOL veri setini okur: data/LOL/our485/{low,high} (eğitim) ve data/LOL/eval15/{low,high} (test).
 
-Hız için görüntüler küçültülür (varsayılan 128x128). Eylemlerden biri gürültü
-azaltma olduğu için, istenirse karanlık görüntülerin bir kısmına yapay gürültü eklenir.
+Hız için görüntüler küçültülür (varsayılan 128x128). boyut=0 verilirse görüntüler
+ORİJİNAL çözünürlükte (LOL: 600x400) ve oranı bozulmadan okunur.
+Eylemlerden biri gürültü azaltma olduğu için, istenirse karanlık görüntülerin bir
+kısmına yapay gürültü eklenir.
 """
 from pathlib import Path
 import numpy as np
@@ -11,7 +13,8 @@ import cv2
 
 def _oku(yol, boyut):
     img = cv2.cvtColor(cv2.imread(str(yol)), cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (boyut, boyut), interpolation=cv2.INTER_AREA)
+    if boyut:                                   # 0 / None -> orijinal boyut
+        img = cv2.resize(img, (boyut, boyut), interpolation=cv2.INTER_AREA)
     return img.astype(np.float32) / 255
 
 

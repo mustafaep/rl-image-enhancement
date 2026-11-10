@@ -19,6 +19,16 @@ EYLEM_ADLARI = ["aydinlat", "karart", "clahe", "gurultu_azalt", "keskinlestir", 
 DUR = EYLEM_ADLARI.index("dur")
 
 
+# Filtrelerin piksel cinsinden ayarları 128 piksellik görüntüye göre seçildi.
+# Daha büyük görüntüde aynı GÖRSEL etkiyi vermeleri için bu ayarlar
+# görüntünün büyüklüğüyle orantılı büyütülür (128x128'de ölçek = 1, hiçbir şey değişmez).
+TEMEL_BOYUT = 128
+
+
+def _olcek(img):
+    return max(img.shape[:2]) / TEMEL_BOYUT
+
+
 def _gamma(img, g):
     # img: 0-1 arası float. g < 1 aydınlatır, g > 1 karartır.
     return np.clip(img, 0, 1) ** g
@@ -34,12 +44,14 @@ def _clahe(img):
 
 def _gurultu_azalt(img):
     # Bilateral filtre: kenarları koruyarak düzleştirir.
-    return cv2.bilateralFilter(img.astype(np.float32), d=5, sigmaColor=0.1, sigmaSpace=5)
+    o = _olcek(img)
+    d = 2 * int(round(2 * o)) + 1                # 128'de 5 piksel, 600'de 19 piksel
+    return cv2.bilateralFilter(img.astype(np.float32), d=d, sigmaColor=0.1, sigmaSpace=5 * o)
 
 
 def _keskinlestir(img):
     # Unsharp mask: görüntü + 0.6 * (görüntü - bulanık hâli)
-    bulanik = cv2.GaussianBlur(img, (0, 0), 1.5)
+    bulanik = cv2.GaussianBlur(img, (0, 0), 1.5 * _olcek(img))
     return np.clip(img + 0.6 * (img - bulanik), 0, 1)
 
 
@@ -64,9 +76,17 @@ GURULTU_SINIRLARI = [0.015, 0.035]               # -> 3 aralık
 DURUM_SAYISI = 5 * 4 * 3
 
 
+def _ozellik_kopyasi(img):
+    """Durum her zaman 128x128'lik bir kopyadan hesaplanır. Böylece 128'de eğitilen
+    Q-tablosu, tam çözünürlüklü görüntüde de aynı durum numaralarını görür."""
+    if img.shape[:2] == (TEMEL_BOYUT, TEMEL_BOYUT):
+        return img
+    return cv2.resize(img, (TEMEL_BOYUT, TEMEL_BOYUT), interpolation=cv2.INTER_AREA)
+
+
 def ozellikler(img):
     """Görüntüden 3 sayı: ortalama parlaklık, kontrast (std), gürültü tahmini."""
-    gri = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_RGB2GRAY)
+    gri = cv2.cvtColor(_ozellik_kopyasi(img).astype(np.float32), cv2.COLOR_RGB2GRAY)
     parlaklik = float(gri.mean())
     kontrast = float(gri.std())
     # Gürültü: görüntü ile 3x3 medyan filtreli hâli arasındaki fark.
