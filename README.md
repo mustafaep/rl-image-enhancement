@@ -33,7 +33,8 @@ Karanlık ve gürültülü bir fotoğrafı düzeltmek için genelde sabit bir fi
 Girdi (hiçbir şey yapmamak) · Rastgele ajan · Histogram eşitleme · Sabit Gamma + CLAHE · Aç gözlü kâhin (her adımda referansa bakarak en iyi eylemi seçer; gerçekte yapılamaz, **üst sınır** olarak verilir)
 
 ## 3. Deney düzeni
-- Veri: LOL (Wei ve ark., 2018): 485 eğitim, 15 test çifti. Hız için 128×128'e küçültüldü. Karanlık görüntülerin yarısına yapay Gauss gürültüsü eklendi.
+- Veri: LOL (Wei ve ark., 2018): 485 eğitim, 15 test çifti (600×400). Eğitim hız için 128×128'de yapıldı. Karanlık görüntülerin yarısına yapay Gauss gürültüsü eklendi.
+- Tam çözünürlük: Durum her zaman 128×128'lik bir kopyadan hesaplandığı ve filtre parametreleri görüntü boyutuyla orantılı ölçeklendiği için, 128×128'de eğitilen Q-tablosu orijinal 600×400 görüntülere doğrudan uygulanabilir (`evaluate.py --tam`).
 - Ölçütler: PSNR, SSIM, ortalama adım sayısı
 - Eğitim: 3000 bölüm
 
@@ -51,7 +52,8 @@ Girdi (hiçbir şey yapmamak) · Rastgele ajan · Histogram eşitleme · Sabit G
 pip install -r requirements.txt
 # LOL veri setini data/LOL/ altına koy (bkz. data/README.md)
 python train.py --ajan hepsi --bolum 3000
-python evaluate.py
+python evaluate.py          # 128×128
+python evaluate.py --tam    # orijinal 600×400; results/tam/ altında piksel piksel karşılaştırmalar
 ```
 
 Çıktılar `results/` klasörüne yazılır.
