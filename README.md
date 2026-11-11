@@ -2,8 +2,6 @@
 
 *Derin Pekiştirmeli Öğrenme dersi dönem projesi*
 
-> **Durum:** Taslak. Sonuçlar eklendi; tartışma bölümü yazılıyor.
-
 ## Özet
 Karanlık ve gürültülü görüntülerin iyileştirilmesinde genellikle gamma düzeltme ve CLAHE gibi işlemler belirli bir sırayla uygulanır. Ancak bu işlemlerin her görüntüde aynı sonucu vermesi beklenemez. Bu projede, görüntünün özelliklerine göre uygun iyileştirme işlemini ve uygulama sırasını seçebilen bir pekiştirmeli öğrenme ajanı geliştiriyoruz.
 
@@ -112,9 +110,24 @@ Orijinal çözünürlükte, ölçeklenmeden (girdi · Gamma + CLAHE · Q-learnin
 Bütün test görüntüleri için: [`results/tam/`](results/tam/)
 
 ## 5. Tartışma
-*(doldurulacak: ajan hangi durumda hangi eylemi seçmeyi öğrendi? Q-learning, SARSA, Monte Carlo farkı? Sınırlılıklar: kaba durum tanımı, ödül referans gerektiriyor…)*
+
+**Ajan ne öğrendi?** Q-tablosuna bakınca ajanın öğrendiği şey aslında oldukça sezgisel. Görüntü karanlıkken neredeyse her durumda en yüksek değer "aydınlat" eyleminde. Karanlık ve gürültülü durumlarda (ör. durum 2) önce gürültü azaltmayı tercih ediyor; bu da mantıklı, çünkü önce aydınlatmak gürültüyü de büyütüyor. Orta parlaklıktaki bazı durumlarda (12, 13) CLAHE öne çıkıyor. Görüntü yeterince aydınlandıktan sonra ise filtrelerin değeri sıfıra yakın ya da negatif olduğu için ajan duruyor. Yani ajan sadece "ne yapacağını" değil, "ne zaman bırakacağını" da öğrenmiş. Sabit Gamma + CLAHE zinciri bunu yapamıyor: her görüntüye aynı iki adımı uyguluyor.
+
+**Üç yöntemin karşılaştırması.** Q-learning ve SARSA neredeyse aynı sonucu verdi (SSIM 0,713 ve 0,714). Bunu bekliyorduk: bölümler çok kısa (en fazla 5 adım) ve ε eğitimin ikinci yarısında 0,05'e indiği için iki yöntemin hedefleri arasındaki fark küçülüyor. Monte Carlo biraz geride kaldı (0,682) ve öğrenme eğrisi de daha yavaş yükseldi. Monte Carlo güncelleme için bölümün bitmesini bekliyor ve hedef olarak o bölümde gerçekten toplanan getiriyi kullanıyor. Bu getiri seçilen görüntüye ve keşif sırasında yapılan rastgele hamlelere çok bağlı, yani gürültülü. Aynı bölüm sayısında tablosu daha geç oturuyor.
+
+**Ajan ile kâhin arasındaki fark.** Kâhin her adımda referansa bakarak seçim yaptığı için 0,754'e ulaşıyor; ajan 0,713'te kalıyor. Farkın ana nedeni durum tanımının kaba olması. 60 durum, birbirinden oldukça farklı görüntüleri aynı numaraya koyuyor. Örneğin eval15/1.png'de ajan 44 numaralı durumda gürültü azaltmayı seçti, çünkü o duruma düşen diğer görüntülerde bu işe yaramıştı; bu görüntüde ise SSIM hafifçe düştü. Eğitimi uzatmak bu farkı kapatmıyor: ödül 2000. bölümden sonra zaten düzleşiyor. Farkı kapatmanın yolu durumu zenginleştirmek (daha fazla aralık ya da yeni özellikler), ama bu tabloyu büyütüyor ve her hücrenin öğrenilmesi için daha çok bölüm gerekiyor.
+
+**Çözünürlük.** Ajan 128×128'de eğitildi ama orijinal 600×400 görüntülerde de sabit yöntemi geçti (0,575'e karşı 0,440). Orijinal boyutta bütün yöntemlerin SSIM'i düşüyor, çünkü küçültme gürültüyü yumuşatıyor; büyük görüntüde gürültü olduğu gibi duruyor. Kâhinle fark da orijinal boyutta büyüyor (0,575'e karşı 0,692). Bunun bir nedeni, ajanın durumu küçültülmüş kopyadan okuması ve büyük görüntüdeki gürültüyü olduğundan az görmesi olabilir.
+
+**Sınırlılıklar.**
+- Ödül için aydınlık referans görüntü gerekiyor. Eğitilmiş ajan referansa ihtiyaç duymuyor (sadece durumu kullanıyor), ama eğitim için aynı sahnenin karanlık ve aydınlık çiftleri şart.
+- SSIM insan gözüyle birebir örtüşmüyor. SSIM'i yüksek bir sonuç göze her zaman en iyi görünen sonuç olmayabilir.
+- Eylemler sabit ayarlı (ör. gamma hep 0,6). Ajan filtrenin gücünü ayarlayamıyor, sadece aynı filtreyi tekrar uygulayabiliyor.
+- Durum tüm görüntünün ortalamasına bakıyor. Bir köşesi aydınlık, diğer köşesi karanlık bir görüntüyü ayırt edemiyor.
+- Sadece LOL veri setinde denendi (iç mekân sahneleri); test seti 15 görüntü ve tek bir rastgele tohumla çalıştırıldı.
 
 ## 6. Sonuç
+Bu projede karanlık görüntülere hangi filtrenin hangi sırayla uygulanacağını, 60 durumlu ve 6 eylemli küçük bir Q-tablosuyla öğrenen bir ajan geliştirdik. Derin ağ kullanmadan, yaklaşık 30 saniyelik bir eğitimle ajan, her görüntüye aynı işlemi uygulayan Gamma + CLAHE zincirini hem 128×128'de (SSIM 0,71'e karşı 0,61) hem de orijinal çözünürlükte (0,58'e karşı 0,44) geçti. Öğrenilen politika tablodan doğrudan okunabiliyor: karanlıkta aydınlat, gürültü varsa önce onu azalt, yeterince iyiyse dur. Yöntemin sınırı durum tanımının kabalığı; ileride durumun zenginleştirilmesi, ayarlanabilir eylemler ve referans gerektirmeyen bir ödül denenebilir.
 
 ## Çalıştırma
 
