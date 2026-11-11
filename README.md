@@ -90,7 +90,7 @@ Bütün yöntemlerin SSIM'i orijinal boyutta düşüyor, ama sıralama korunuyor
 
 ![Q-tablosu: Q-learning](results/q_tablosu_qlearning.png)
 
-60 durumdan 48'i eğitim sırasında ziyaret edildi. Karanlık durumlarda (parlaklık aralığı 0–1, durum 0–23) en yüksek değer çoğunlukla **aydınlat** eyleminde. Aydınlık durumlarda (durum 36 ve sonrası) filtrelerin değeri çoğunlukla 0'a yakın ya da negatif, bu yüzden ajan çoğunlukla **dur** eylemini seçiyor; birkaç durumda (ör. 44) küçük pozitif değerle gürültü azaltmayı deniyor. Test setinde en sık eylem dizileri:
+60 durumdan 48'i eğitim sırasında ziyaret edildi. Karanlık durumlarda (parlaklık aralığı 0–1, durum 0–23) en yüksek değer çoğunlukla **aydınlat** eyleminde. Aydınlık durumlarda (durum 36 ve sonrası) filtrelerin değeri 0'a yakın ya da negatif. Test görüntülerinin en sık vardığı durumlarda (39, 40, 42, 43) en iyi eylem **dur**. Diğer aydınlık durumlarda küçük pozitif değerlerle gürültü azaltma (ör. 44) ya da en parlak aralıkta karartma (ör. 52, 54) öne çıkıyor. Test setinde en sık eylem dizileri:
 
 | Ajan | 128×128 | 600×400 |
 |---|---|---|
@@ -111,7 +111,7 @@ Bütün test görüntüleri için: [`results/tam/`](results/tam/)
 
 ## 5. Tartışma
 
-**Ajan ne öğrendi?** Q-tablosuna bakınca ajanın öğrendiği şey aslında oldukça sezgisel. Görüntü karanlıkken neredeyse her durumda en yüksek değer "aydınlat" eyleminde. Karanlık ve gürültülü durumlarda (ör. durum 2) önce gürültü azaltmayı tercih ediyor; bu da mantıklı, çünkü önce aydınlatmak gürültüyü de büyütüyor. Orta parlaklıktaki bazı durumlarda (12, 13) CLAHE öne çıkıyor. Görüntü yeterince aydınlandıktan sonra ise filtrelerin değeri sıfıra yakın ya da negatif olduğu için ajan duruyor. Yani ajan sadece "ne yapacağını" değil, "ne zaman bırakacağını" da öğrenmiş. Sabit Gamma + CLAHE zinciri bunu yapamıyor: her görüntüye aynı iki adımı uyguluyor.
+**Ajan ne öğrendi?** Q-tablosuna bakınca ajanın öğrendiği şey aslında oldukça sezgisel. Görüntü karanlıkken neredeyse her durumda en yüksek değer "aydınlat" eyleminde. Karanlık ve gürültülü durumlarda (ör. durum 2) önce gürültü azaltmayı tercih ediyor; bu da mantıklı, çünkü önce aydınlatmak gürültüyü de büyütüyor. Yalnız bu tercih zayıf: durum 2'de gürültü azaltmanın değeri 4,66, aydınlatmanınki 4,46. Karanlık ve kontrastı düşük durumlarda (12, 13) CLAHE açık farkla öne çıkıyor. Görüntü yeterince aydınlandığında (testte en sık 39, 40, 42 ve 43 numaralı durumlar) bütün filtrelerin değeri negatif, ajan da duruyor: 15 test görüntüsünün 10'unda bölümü kendi "dur" kararıyla bitirdi, 5'inde adım sınırına ulaştı. En parlak aralıkta (durum 48 ve sonrası) ise bazı durumlarda küçük bir pozitif değerle "karart" öne çıkıyor; ajan fazla aydınlatmayı geri almayı da öğrenmiş. Yani ajan sadece "ne yapacağını" değil, "ne zaman bırakacağını" da öğrenmiş. Sabit Gamma + CLAHE zinciri bunu yapamıyor: her görüntüye aynı iki adımı uyguluyor.
 
 **Üç yöntemin karşılaştırması.** Q-learning ve SARSA neredeyse aynı sonucu verdi (SSIM 0,713 ve 0,714). Bunu bekliyorduk: bölümler çok kısa (en fazla 5 adım) ve ε eğitimin ikinci yarısında 0,05'e indiği için iki yöntemin hedefleri arasındaki fark küçülüyor. Monte Carlo biraz geride kaldı (0,682) ve öğrenme eğrisi de daha yavaş yükseldi. Monte Carlo güncelleme için bölümün bitmesini bekliyor ve hedef olarak o bölümde gerçekten toplanan getiriyi kullanıyor. Bu getiri seçilen görüntüye ve keşif sırasında yapılan rastgele hamlelere çok bağlı, yani gürültülü. Aynı bölüm sayısında tablosu daha geç oturuyor.
 
