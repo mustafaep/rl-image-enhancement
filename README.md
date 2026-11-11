@@ -5,7 +5,9 @@
 > **Durum:** Taslak. Sonuçlar eklendi; tartışma bölümü yazılıyor.
 
 ## Özet
-Karanlık ve gürültülü bir fotoğrafı düzeltmek için genelde sabit bir filtre zinciri kullanılır (ör. önce gamma, sonra CLAHE). Ama her fotoğraf aynı zinciri istemez: Biri sadece aydınlatma, diğeri önce gürültü azaltma ister. Bu projede **hangi filtrenin hangi sırayla uygulanacağını** bir pekiştirmeli öğrenme ajanına öğretiyoruz. Ajan görüntünün parlaklık, kontrast ve gürültü düzeyine bakar, 6 klasik işlemden birini seçer ve görüntü aydınlık referansa yaklaştıkça (SSIM artışı) ödül alır. Derin ağ kullanılmaz; ajan **Q-learning, SARSA ve Monte Carlo** ile küçük bir Q-tablosu öğrenir. LOL veri setinde ajanı sabit filtre zincirleri, histogram eşitleme ve rastgele ajanla karşılaştırıyoruz.
+Karanlık ve gürültülü görüntülerin iyileştirilmesinde genellikle gamma düzeltme ve CLAHE gibi işlemler belirli bir sırayla uygulanır. Ancak bu işlemlerin her görüntüde aynı sonucu vermesi beklenemez. Bu projede, görüntünün özelliklerine göre uygun iyileştirme işlemini ve uygulama sırasını seçebilen bir pekiştirmeli öğrenme ajanı geliştiriyoruz.
+
+Ajan, görüntünün parlaklık, kontrast ve gürültü seviyelerini değerlendirerek altı eylemden birini seçiyor: beş klasik görüntü işleme yöntemi ve "dur". Elde edilen sonuç, aydınlık referans görüntüyle SSIM üzerinden karşılaştırılıyor ve iyileşme miktarına göre ajan ödüllendiriliyor. Projede derin öğrenme ağı yerine Q-learning, SARSA ve Monte Carlo algoritmalarıyla bir Q-tablosu oluşturuluyor. Geliştirilen ajanların performansı LOL veri seti üzerinde sabit bir filtre zinciri (Gamma + CLAHE), histogram eşitleme ve rastgele seçim yapan bir ajanla karşılaştırılıyor. Q-learning ve SARSA ajanları, SSIM'de en iyi sabit yöntemi yaklaşık 0,10 farkla geçiyor (0,71'e karşı 0,61).
 
 ## 1. Giriş
 - Problem: düşük ışıkta çekilmiş görüntüleri iyileştirme
