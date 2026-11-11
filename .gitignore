@@ -6,3 +6,5 @@ __pycache__/
 data/LOL/
 # Büyük ara çıktılar
 results/*.npy
+# demo.py çıktıları
+results/demo/

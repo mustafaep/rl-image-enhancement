@@ -137,6 +137,8 @@ pip install -r requirements.txt
 python train.py --ajan hepsi --bolum 3000
 python evaluate.py          # 128×128
 python evaluate.py --tam    # orijinal 600×400; results/tam/ altında piksel piksel karşılaştırmalar
+python demo.py --test 22    # tek bir test görüntüsünde ajanın adım adım kararları
+python demo.py foto.jpg     # herhangi bir fotoğraf (referans gerekmez)
 ```
 
 Çıktılar `results/` klasörüne yazılır.
@@ -150,6 +152,7 @@ src/baselines.py  karşılaştırma yöntemleri
 src/data.py       LOL yükleme
 train.py          eğitim
 evaluate.py       test + tablolar + görseller
+demo.py           tek görüntüde adım adım çalıştırma
 notebooks/        adım adım anlatım
 ```
 
