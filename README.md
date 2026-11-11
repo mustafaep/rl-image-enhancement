@@ -2,7 +2,7 @@
 
 *Derin Pekiştirmeli Öğrenme dersi dönem projesi*
 
-> **Durum:** Taslak. Sonuçlar ve tartışma bölümleri deneyler bittikçe doldurulacak.
+> **Durum:** Taslak. Sonuçlar eklendi; tartışma bölümü yazılıyor.
 
 ## Özet
 Karanlık ve gürültülü bir fotoğrafı düzeltmek için genelde sabit bir filtre zinciri kullanılır (ör. önce gamma, sonra CLAHE). Ama her fotoğraf aynı zinciri istemez: Biri sadece aydınlatma, diğeri önce gürültü azaltma ister. Bu projede **hangi filtrenin hangi sırayla uygulanacağını** bir pekiştirmeli öğrenme ajanına öğretiyoruz. Ajan görüntünün parlaklık, kontrast ve gürültü düzeyine bakar, 6 klasik işlemden birini seçer ve görüntü aydınlık referansa yaklaştıkça (SSIM artışı) ödül alır. Derin ağ kullanılmaz; ajan **Q-learning, SARSA ve Monte Carlo** ile küçük bir Q-tablosu öğrenir. LOL veri setinde ajanı sabit filtre zincirleri, histogram eşitleme ve rastgele ajanla karşılaştırıyoruz.
@@ -39,7 +39,75 @@ Girdi (hiçbir şey yapmamak) · Rastgele ajan · Histogram eşitleme · Sabit G
 - Eğitim: 3000 bölüm
 
 ## 4. Sonuçlar
-*(doldurulacak: `results/sonuclar.md` tablosu, öğrenme eğrisi, örnek görüntüler, Q-tablosu ısı haritası)*
+
+### 4.1 Test seti (128×128)
+LOL eval15, 15 görüntü. Ajanlar 3000 bölüm eğitildi; testte keşif kapalı (ε = 0).
+
+| Yöntem | PSNR ↑ | SSIM ↑ | Ort. adım |
+|---|---|---|---|
+| Girdi (işlem yok) | 7,83 | 0,161 | 0,0 |
+| Rastgele ajan | 9,84 | 0,335 | 3,1 |
+| Histogram eşitleme | 13,91 | 0,506 | 1,0 |
+| Sabit Gamma + CLAHE | 14,70 | 0,610 | 2,0 |
+| **RL: Q-learning** | 15,91 | 0,713 | 3,8 |
+| **RL: SARSA** | **16,33** | **0,714** | 3,6 |
+| **RL: Monte Carlo** | 14,96 | 0,682 | 2,9 |
+| Açgözlü kâhin (üst sınır) | 18,83 | 0,754 | 3,9 |
+
+Üç RL ajanı da en iyi sabit yöntemi (Gamma + CLAHE) geçiyor: SSIM'de Q-learning ve SARSA +0,10, Monte Carlo +0,07. Açgözlü kâhin her adımda referans görüntüye bakarak en iyi eylemi seçtiği için gerçekte uygulanamaz; ulaşılabilecek üst sınırı göstermek için verildi.
+
+### 4.2 Orijinal çözünürlük (600×400)
+Aynı Q-tabloları, yeniden eğitilmeden orijinal boyuttaki görüntülere uygulandı (`evaluate.py --tam`).
+
+| Yöntem | PSNR ↑ | SSIM ↑ | Ort. adım |
+|---|---|---|---|
+| Girdi (işlem yok) | 7,77 | 0,173 | 0,0 |
+| Rastgele ajan | 9,47 | 0,276 | 3,1 |
+| Histogram eşitleme | 13,98 | 0,334 | 1,0 |
+| Sabit Gamma + CLAHE | 13,69 | 0,440 | 2,0 |
+| **RL: Q-learning** | 15,55 | **0,575** | 3,7 |
+| **RL: SARSA** | **15,64** | 0,558 | 3,5 |
+| **RL: Monte Carlo** | 14,30 | 0,526 | 2,8 |
+| Açgözlü kâhin (üst sınır) | 17,46 | 0,692 | 4,5 |
+
+Bütün yöntemlerin SSIM'i orijinal boyutta düşüyor, ama sıralama korunuyor ve RL ile sabit yöntem arasındaki fark büyüyor (Q-learning +0,135).
+
+### 4.3 Öğrenme eğrisi
+
+![Öğrenme eğrisi](results/ogrenme_egrisi.png)
+
+500 bölümlük dilimlerde ortalama toplam ödül:
+
+| Bölüm | 1–500 | 501–1000 | 1001–1500 | 1501–2000 | 2001–2500 | 2501–3000 |
+|---|---|---|---|---|---|---|
+| Q-learning | 2,51 | 4,23 | 4,33 | 4,79 | 4,66 | 4,93 |
+| SARSA | 2,43 | 4,29 | 4,62 | 4,70 | 4,91 | 4,95 |
+| Monte Carlo | 2,33 | 4,14 | 4,04 | 4,17 | 4,48 | 4,80 |
+
+Ödül ilk 1000 bölümde hızla artıyor, sonra yavaşça düzleşiyor. ε yaklaşık 1500. bölümde alt sınırı olan 0,05'e iniyor. Monte Carlo en yavaş yükselen yöntem.
+
+### 4.4 Öğrenilen politika (Q-tablosu)
+
+![Q-tablosu: Q-learning](results/q_tablosu_qlearning.png)
+
+60 durumdan 48'i eğitim sırasında ziyaret edildi. Karanlık durumlarda (parlaklık aralığı 0–1, durum 0–23) en yüksek değer çoğunlukla **aydınlat** eyleminde. Aydınlık durumlarda (durum 36 ve sonrası) filtrelerin değeri çoğunlukla 0'a yakın ya da negatif, bu yüzden ajan çoğunlukla **dur** eylemini seçiyor; birkaç durumda (ör. 44) küçük pozitif değerle gürültü azaltmayı deniyor. Test setinde en sık eylem dizileri:
+
+| Ajan | 128×128 | 600×400 |
+|---|---|---|
+| Q-learning | gürültü azalt → aydınlat → aydınlat → dur | aydınlat → aydınlat → dur |
+| SARSA | aydınlat → aydınlat → dur | aydınlat → aydınlat → dur |
+| Monte Carlo | gürültü azalt → aydınlat → aydınlat → dur | aydınlat → aydınlat → dur |
+| Sabit yöntem | aydınlat → CLAHE (her görüntüde aynı) | aydınlat → CLAHE |
+
+### 4.5 Örnek görüntüler
+
+![Örnekler (128×128)](results/ornekler.png)
+
+Orijinal çözünürlükte, ölçeklenmeden (girdi · Gamma + CLAHE · Q-learning · SARSA · referans):
+
+![eval15/1.png](results/tam/1.png)
+
+Bütün test görüntüleri için: [`results/tam/`](results/tam/)
 
 ## 5. Tartışma
 *(doldurulacak: ajan hangi durumda hangi eylemi seçmeyi öğrendi? Q-learning, SARSA, Monte Carlo farkı? Sınırlılıklar: kaba durum tanımı, ödül referans gerektiriyor…)*
