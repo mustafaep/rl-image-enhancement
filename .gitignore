@@ -2,9 +2,7 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .venv/
-# Veri seti repoya konmaz (büyük), data/README.md'deki adımlarla indirilir
-data/LOL/
-# Büyük ara çıktılar
-results/*.npy
-# demo.py çıktıları
-results/demo/
+# Yerel veri ve denemeler repoya konmaz
+data/
+# demo_ocr.py çıktıları
+results_ocr/demo/

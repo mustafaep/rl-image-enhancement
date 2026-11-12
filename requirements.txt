@@ -1,6 +1,5 @@
 numpy
 opencv-python
-scikit-image
 matplotlib
 gymnasium
 jupyter

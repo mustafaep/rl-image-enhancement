@@ -12,8 +12,8 @@ karartılır, bulanıklaştırılır, gürültü eklenir. Dosya saklanmaz; aynı
 her seferinde aynı görüntüler üretilir.
 
 Durum: parlaklık (4) x kontrast (2) x gürültü (3) x keskinlik (3) = 72 durum.
-Arayüz src/env.py'deki GoruntuOrtami ile aynı, böylece src/agents.py'deki
-ajanlar hiç değişmeden kullanılır.
+Arayüz: reset() -> durum, step(a) -> (durum, odul, bitti). src/agents.py'deki
+ajanlar yalnız bu arayüzü kullanır.
 """
 import os
 os.environ.setdefault("OMP_THREAD_LIMIT", "1")   # Tesseract tek çekirdek kullansın (paralel eğitim için)
@@ -193,7 +193,7 @@ def ozellikler(img):
     gri = cv2.cvtColor(img.astype(np.float32), cv2.COLOR_RGB2GRAY)
     parlaklik = float(gri.mean())
     kontrast = float(gri.std())
-    # Gürültü: src/env.py ile aynı (3x3 medyan farkı, parlaklığa göre normalize)
+    # Gürültü: görüntü ile 3x3 medyan filtreli hâlinin farkı, parlaklığa göre normalize
     medyan = cv2.medianBlur((gri * 255).astype(np.uint8), 3).astype(np.float32) / 255
     gurultu = float(np.abs(gri - medyan).mean() / (parlaklik + 0.05))
     # Keskinlik: Laplacian varyansı; parlaklığa göre normalize (karanlık görüntü bulanık görünmesin)
