@@ -191,6 +191,7 @@ python train_ocr.py --ajan hepsi --bolum 3000
 python evaluate_ocr.py
 python demo_ocr.py --tohum 7                         # sentetik bir görüntüde adım adım
 python demo_ocr.py yazi.png --metin "KITAP 4827"     # kendi görüntün (--metin isteğe bağlı)
+python demo_ocr.py --yaz "ANKARA 2026" [--tohum 3]   # verdiğin metinden görüntü üret, boz, ajanı çalıştır
 ```
 
 İkinci deney Tesseract OCR ister: Linux'ta `sudo apt install tesseract-ocr`, Windows'ta UB Mannheim kurulumu (github.com/UB-Mannheim/tesseract/wiki) ve kurulum klasörünü PATH'e ekleme.
