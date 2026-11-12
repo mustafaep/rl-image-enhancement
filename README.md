@@ -5,7 +5,7 @@
 ## Özet
 Karanlık ve gürültülü görüntülerin iyileştirilmesinde genellikle gamma düzeltme ve CLAHE gibi işlemler belirli bir sırayla uygulanır. Ancak bu işlemlerin her görüntüde aynı sonucu vermesi beklenemez. Bu projede, görüntünün özelliklerine göre uygun iyileştirme işlemini ve uygulama sırasını seçebilen bir pekiştirmeli öğrenme ajanı geliştiriyoruz.
 
-Ajan, görüntünün parlaklık, kontrast ve gürültü seviyelerini değerlendirerek altı eylemden birini seçiyor: beş klasik görüntü işleme yöntemi ve "dur". Elde edilen sonuç, aydınlık referans görüntüyle SSIM üzerinden karşılaştırılıyor ve iyileşme miktarına göre ajan ödüllendiriliyor. Projede derin öğrenme ağı yerine Q-learning, SARSA ve Monte Carlo algoritmalarıyla bir Q-tablosu oluşturuluyor. Geliştirilen ajanların performansı LOL veri seti üzerinde sabit bir filtre zinciri (Gamma + CLAHE), histogram eşitleme ve rastgele seçim yapan bir ajanla karşılaştırılıyor. Q-learning ve SARSA ajanları, SSIM'de en iyi sabit yöntemi yaklaşık 0,10 farkla geçiyor (0,71'e karşı 0,61).
+Ajan, görüntünün parlaklık, kontrast ve gürültü seviyelerini değerlendirerek altı eylemden birini seçiyor: beş klasik görüntü işleme yöntemi ve "dur". Elde edilen sonuç, aydınlık referans görüntüyle SSIM üzerinden karşılaştırılıyor ve iyileşme miktarına göre ajan ödüllendiriliyor. Projede derin öğrenme ağı yerine Q-learning, SARSA ve Monte Carlo algoritmalarıyla bir Q-tablosu oluşturuluyor. Geliştirilen ajanların performansı LOL veri seti üzerinde sabit bir filtre zinciri (Gamma + CLAHE), histogram eşitleme ve rastgele seçim yapan bir ajanla karşılaştırılıyor. Q-learning ve SARSA ajanları, SSIM'de en iyi sabit yöntemi yaklaşık 0,10 farkla geçiyor (0,71'e karşı 0,61). Onaylanan konudaki asıl hedef OCR başarısı olduğu için, ödülü doğrudan Tesseract OCR'nin okuma doğruluğu olan ikinci bir deney de ekledik (sentetik yazı görüntüleri, 9 filtre/parametre eylemi, 72 durum). Bu deneyde Q-learning ajanı 100 test görüntüsünde ortalama OCR skorunu 0,890'a çıkarıyor; hiç işlem yapmamak 0,772, sabit Gamma + CLAHE zinciri ise 0,662 veriyor.
 
 ## 1. Giriş
 - Problem: düşük ışıkta çekilmiş görüntüleri iyileştirme
@@ -129,6 +129,52 @@ Bütün test görüntüleri için: [`results/tam/`](results/tam/)
 ## 6. Sonuç
 Bu projede karanlık görüntülere hangi filtrenin hangi sırayla uygulanacağını, 60 durumlu ve 6 eylemli küçük bir Q-tablosuyla öğrenen bir ajan geliştirdik. Derin ağ kullanmadan, yaklaşık 30 saniyelik bir eğitimle ajan, her görüntüye aynı işlemi uygulayan Gamma + CLAHE zincirini hem 128×128'de (SSIM 0,71'e karşı 0,61) hem de orijinal çözünürlükte (0,58'e karşı 0,44) geçti. Öğrenilen politika tablodan doğrudan okunabiliyor: karanlıkta aydınlat, gürültü varsa önce onu azalt, yeterince iyiyse dur. Yöntemin sınırı durum tanımının kabalığı; ileride durumun zenginleştirilmesi, ayarlanabilir eylemler ve referans gerektirmeyen bir ödül denenebilir.
 
+## 7. İkinci deney: ödül olarak OCR başarısı
+
+**Neden?** Onaylanan konu başlığında ajanın hedefi *OCR başarısını maksimize etmek*. Birinci deneydeki LOL veri setinde yazı ya da metin etiketi olmadığı için orada ödül olarak SSIM kullandık. Bu ikinci deneyde ödülü doğrudan OCR üretiyor: ajan karanlık, bulanık ve gürültülü bir yazı görüntüsüne sırayla hangi filtreyi hangi parametreyle uygulayacağını seçiyor, Tesseract metni ne kadar doğru okursa o kadar ödül alıyor. OCR motoru ajanın değil **ortamın** parçası; ajan yine yalnız bir Q-tablosu (klasik, tablo tabanlı RL). `src/agents.py` hiç değişmedi; yeni ortam (`src/ocr_env.py`) aynı arayüzü sunuyor.
+
+| | |
+|---|---|
+| **Veri** | Sentetik, her çalıştırmada tohumla yeniden üretilir: 320×64 tek satır yazı, "5–7 harf + boşluk + 4 rakam" (O/I/Q ve 0/1 yok), açık düz zemin, koyu yazı, 4 Hershey yazı tipi, rastgele ölçek/kalınlık/konum. Temiz hâlini Tesseract'ın doğru okuyamadığı örnekler elenir. Bozma (her görüntüye bağımsız): Gauss bulanıklığı (σ 0,3–2,0; %40'ında yok) → karartma (×0,08–0,40) → Gauss gürültüsü (std 0,005–0,05; %40'ında yok) → 8 bit'e yuvarlama. Eğitim 400 (tohum 0), test 100 (tohum 123) |
+| **Durum** | parlaklık (4) × kontrast (2) × gürültü (3) × keskinlik (Laplacian varyansı, 3) = **72 durum**. Sınırlar eğitim verisindeki dağılımın yüzdelik dilimlerinden seçildi |
+| **Eylemler (9)** | gamma 0,5 · gamma 0,75 · CLAHE clip 2,0 · CLAHE clip 4,0 · bilateral hafif · bilateral güçlü · keskinleştir 0,6 · keskinleştir 1,5 · dur |
+| **OCR skoru** | Tesseract 5 (`--psm 7`, eng, beyaz liste A–Z, 0–9, boşluk); skor = 1 − Levenshtein / max(uzunluk), 0–1 |
+| **Ödül** | skor_sonra − skor_önce − 0,02 (adım cezası); "dur" = 0 ve bölüm biter; en fazla 5 adım |
+| **Eğitim** | Birinci deneyle aynı ayarlar (α 0,1; γ 0,95; ε 1,0 → 0,05, çarpan 0,998; seed 0), 3000 bölüm, üç ajan paralel; 2 çekirdekte toplam ~12 dakika |
+
+Ayar turu yapılmadı: durum sınırları ve adım cezası ilk hâliyle kullanıldı (eğitimde ödül her üç ajanda da negatiften pozitife çıktı).
+
+**Sonuçlar** (test, 100 görüntü; temiz görüntülerin OCR skoru 1,000, çünkü temiz hâli okunamayanlar üretimde elendi):
+
+| Yöntem | Ort. OCR skoru ↑ | Tam okuma ↑ | Ort. adım |
+|---|---|---|---|
+| Girdi (işlem yok) | 0,772 | %71 | 0,0 |
+| Rastgele ajan | 0,600 | %50 | 3,2 |
+| Sabit zincir (gamma 0,5 → CLAHE 2,0) | 0,662 | %62 | 2,0 |
+| **RL: Q-learning** | **0,890** | **%82** | 0,8 |
+| RL: SARSA | 0,827 | %74 | 0,8 |
+| RL: Monte Carlo | 0,850 | %77 | 0,2 |
+| Açgözlü kâhin (gerçek metne bakar; hileli üst sınır) | 0,954 | %88 | 0,3 |
+
+Bozulma türüne göre ortalama OCR skoru:
+
+| Bozulma | n | Girdi | Sabit zincir | Q-learning | SARSA | Monte Carlo | Kâhin |
+|---|---|---|---|---|---|---|---|
+| yalnız karanlık | 17 | 0,995 | 1,000 | 0,995 | 0,995 | 0,995 | 1,000 |
+| karanlık + bulanık | 30 | 0,967 | 0,924 | 0,967 | 0,967 | 0,967 | 1,000 |
+| karanlık + gürültülü | 23 | 0,818 | 0,637 | 0,964 | 0,839 | 0,934 | 0,978 |
+| hepsi | 30 | 0,416 | 0,228 | 0,696 | 0,584 | 0,586 | 0,862 |
+
+![OCR öğrenme eğrisi](results_ocr/ogrenme_egrisi.png)
+
+![OCR örnekleri](results_ocr/ornekler.png)
+
+*Örnekler ajanın sabit zinciri geçtiği, geride kaldığı ve eşit kaldığı durumlardan ikişer tane (her gruptaki ilk iki test görüntüsü). Her panelin başlığında OCR'nin okuduğu metin ve skor var.*
+
+**Yorum.** Q-learning ajanı ortalama OCR skorunu girdiye göre 0,12, sabit zincire göre 0,23 artırdı; üç ajan da hem girdiyi hem sabit zinciri geçti, ama hileli kâhinin (0,954) gerisinde kaldı. Şaşırtıcı bulgu, sabit Gamma + CLAHE zincirinin OCR'yi *düşürmesi*: Tesseract görüntüyü kendi içinde ikiliye çevirdiği için yalnız karanlık bir yazıyı zaten büyük ölçüde okuyabiliyor, aydınlatma ve CLAHE ise gürültüyü de büyütüyor. Ajan bunu öğrendi: test görüntülerinin %63'ünde hiçbir şey yapmadan duruyor, kazancın neredeyse tamamı gürültülü görüntülerde güçlü bilateral filtreyi (gerekirse ardından gamma 0,5'i) seçmesinden geliyor. Kâhinin de çoğunlukla hemen durması (%74), bu ortamda asıl sorunun karanlık değil gürültü olduğunu doğruluyor. Ajanın zayıf yanı da görselde görülüyor: kaba durum tanımı yüzünden OCR'nin hiç okuyamadığı bir görüntüde de (görseldeki PEMKK 5495, karanlık + bulanık) duruyor ve sabit zincirin tam okuttuğu örneği kaçırıyor.
+
+**Sınırlılıklar.** (1) Veri sentetik: düz zemin, tek satır, Hershey yazı tipleri; gerçek fotoğraftaki yazılar (perspektif, doku, düzensiz ışık) daha zor. (2) Tek tohumla tek eğitim yapıldı; ajanlar arasındaki farkların bir kısmı rastlantısal olabilir (SARSA ve Monte Carlo'nun son 500 bölümdeki ödülü bir önceki dilime göre düştü). (3) Sonuçlar Tesseract sürümüne (burada 5.3.4) ve ayarlarına bağlı; başka bir sürüm aynı görüntüyü farklı okuyabilir. (4) OCR'nin kendisi klasik olmayan (LSTM tabanlı) bir bileşen; ancak ödülü üreten ortamın parçası, ajan değil; öğrenen kısım yalnız Q-tablosu. (5) OCR yavaş olduğu için ortam, aynı görüntüye aynı eylem dizisinin OCR skorunu bir kez hesaplayıp saklıyor (filtreler belirlenimci olduğundan sonucu değiştirmez). Tesseract'ın çöktüğü çok bozuk görüntüler "hiçbir şey okunamadı" sayılıyor.
+
 ## Çalıştırma
 
 ```bash
@@ -139,9 +185,17 @@ python evaluate.py          # 128×128
 python evaluate.py --tam    # orijinal 600×400; results/tam/ altında piksel piksel karşılaştırmalar
 python demo.py --test 22    # tek bir test görüntüsünde ajanın adım adım kararları
 python demo.py foto.jpg     # herhangi bir fotoğraf (referans gerekmez)
+
+# İkinci deney (ödül = OCR başarısı); veri indirmeye gerek yok, sentetik üretilir
+python train_ocr.py --ajan hepsi --bolum 3000
+python evaluate_ocr.py
+python demo_ocr.py --tohum 7                         # sentetik bir görüntüde adım adım
+python demo_ocr.py yazi.png --metin "KITAP 4827"     # kendi görüntün (--metin isteğe bağlı)
 ```
 
-Çıktılar `results/` klasörüne yazılır.
+İkinci deney Tesseract OCR ister: Linux'ta `sudo apt install tesseract-ocr`, Windows'ta UB Mannheim kurulumu (github.com/UB-Mannheim/tesseract/wiki) ve kurulum klasörünü PATH'e ekleme.
+
+Çıktılar `results/` (ikinci deney: `results_ocr/`) klasörüne yazılır.
 
 ## Klasör yapısı
 
@@ -153,6 +207,11 @@ src/data.py       LOL yükleme
 train.py          eğitim
 evaluate.py       test + tablolar + görseller
 demo.py           tek görüntüde adım adım çalıştırma
+src/ocr_env.py    ikinci deney: sentetik veri, bozma, filtreler, OCR ödülü, ortam
+train_ocr.py      ikinci deney eğitimi
+evaluate_ocr.py   ikinci deney test + tablolar + görseller
+demo_ocr.py       ikinci deney: tek görüntüde adım adım çalıştırma
+results_ocr/      ikinci deney çıktıları
 notebooks/        adım adım anlatım
 ```
 
